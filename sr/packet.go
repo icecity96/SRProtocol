@@ -2,39 +2,39 @@ package sr
 
 import (
 	"errors"
-	"time"
 	"fmt"
 	"log"
+	"time"
 )
 
 type Packet struct {
-	SeqAvaility	bool `json:"seq_availity"`
-	AckAvaility	bool `json:"ack_availity"`
-	GBN		bool `json:"gbn"`
-	SeqNo	int	`json:"seq_no"`
-	AckNo 	int	`json:"ack_no"`
-	Data 	[]byte	`json:"data"`
+	SeqAvaility bool   `json:"seq_availity"`
+	AckAvaility bool   `json:"ack_availity"`
+	GBN         bool   `json:"gbn"`
+	SeqNo       int    `json:"seq_no"`
+	AckNo       int    `json:"ack_no"`
+	Data        []byte `json:"data"`
 }
 
 type SequenceNumber struct {
-	Content 	Packet
+	Content        Packet
 	SequenceNumber int
-	Sent		bool
-	Acknowledge	bool
-	TimerOut	*time.Timer
+	Sent           bool
+	Acknowledge    bool
+	TimerOut       *time.Timer
 }
 
 type Queue struct {
-	contents 	[]SequenceNumber
-	windowSize				int
-	baseIndex				int
-	nextSequenceNumberIndex	int
+	contents                []SequenceNumber
+	windowSize              int
+	baseIndex               int
+	nextSequenceNumberIndex int
 }
 
 func NewQueue(windowSize int) *Queue {
 	queue := new(Queue)
 
-	queue.contents = make([]SequenceNumber,windowSize)
+	queue.contents = make([]SequenceNumber, windowSize)
 	queue.windowSize = windowSize
 	queue.baseIndex = 0
 	queue.nextSequenceNumberIndex = 0
@@ -66,13 +66,13 @@ func (q *Queue) Send() (int, error) {
 	if q.nextSequenceNumberIndex >= cap(q.contents) {
 		numberToAdd := cap(q.contents)
 
-		for i := numberToAdd; i <= 2 * numberToAdd; i++ {
-			newSequenceNumber := SequenceNumber{SequenceNumber:i, Sent:false, Acknowledge:false}
+		for i := numberToAdd; i <= 2*numberToAdd; i++ {
+			newSequenceNumber := SequenceNumber{SequenceNumber: i, Sent: false, Acknowledge: false}
 			q.contents = append(q.contents, newSequenceNumber)
 		}
 	}
 
-	return q.nextSequenceNumberIndex-1, nil
+	return q.nextSequenceNumberIndex - 1, nil
 }
 
 func (q *Queue) Full() bool {
@@ -90,11 +90,11 @@ func (q *Queue) FreeSpace() int {
 }
 
 // MarkAckowledged marks the given sequence number as acknowledged if it is in the window
-func (q *Queue) MarkAcknowledged(sequenceNumber int,gbn bool) (int,error) {
+func (q *Queue) MarkAcknowledged(sequenceNumber int, gbn bool) (int, error) {
 	if q.Empty() {
-		return 0,errors.New("Window is empty")
+		return 0, errors.New("Window is empty")
 	}
-	if gbn {	// GBN
+	if gbn { // GBN
 		var count int
 		for i := q.baseIndex; i < q.nextSequenceNumberIndex; i++ {
 			if q.contents[i].SequenceNumber < sequenceNumber {
@@ -103,23 +103,23 @@ func (q *Queue) MarkAcknowledged(sequenceNumber int,gbn bool) (int,error) {
 				q.contents[i].TimerOut.Stop()
 				q.slideWindow()
 			}
-			return count,nil
+			return count, nil
 		}
-	} else {	// SR
+	} else { // SR
 		for i := q.baseIndex; i < q.nextSequenceNumberIndex; i++ {
 			if i == sequenceNumber {
 				q.contents[i].Acknowledge = true
 				q.contents[i].TimerOut.Stop()
-				log.Printf("SR: PACKET #%d Timer stop",i)
+				log.Printf("SR: PACKET #%d Timer stop", i)
 				if i == q.baseIndex {
 					q.slideWindow()
 				}
-				return 1,nil
+				return 1, nil
 			}
 		}
 	}
 
-	return 0,fmt.Errorf("Sequence number %d not found in window.", sequenceNumber)
+	return 0, fmt.Errorf("Sequence number %d not found in window.", sequenceNumber)
 }
 
 // slideWindow slides the window until the first unacknowledged sequence number

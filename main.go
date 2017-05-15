@@ -1,11 +1,11 @@
 package main
 
 import (
-	"net"
-	"log"
-	"time"
-	"flag"
 	"SRProtocol/sr"
+	"flag"
+	"log"
+	"net"
+	"time"
 )
 
 func main() {
@@ -20,14 +20,14 @@ func main() {
 	flag.Parse()
 
 	packetLoss := parsePacketSequence(*packetSequence)
-	ServerAddr,_ := net.ResolveUDPAddr("udp","127.0.0.1:10001")
-	client := sr.NewClient(*senderWindowSize,ServerAddr)
-	server := sr.NewServer(*reciverWindowSize,ServerAddr)
+	ServerAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:10001")
+	client := sr.NewClient(*senderWindowSize, ServerAddr)
+	server := sr.NewServer(*reciverWindowSize, ServerAddr)
 	defer client.Conn.Close()
 	defer server.Conn.Close()
-	k := make(chan int,len(*packetSequence))
-	go receiveHandler(client,"CLIENT",k)
-	go receiveHandler2(server,"SERVER",nil)
+	k := make(chan int, len(*packetSequence))
+	go receiveHandler(client, "CLIENT", k)
+	go receiveHandler2(server, "SERVER", nil)
 	go func() {
 		for _, v := range packetLoss {
 			go send(client, v.Sender, v.Acknowledgment)
@@ -35,14 +35,14 @@ func main() {
 		}
 	}()
 
-	for i := 0; i < len(*packetSequence) ; i++ {
+	for i := 0; i < len(*packetSequence); i++ {
 		<-k
 	}
 }
 
 type PacketLoss struct {
-	Sender 			bool
-	Acknowledgment	bool
+	Sender         bool
+	Acknowledgment bool
 }
 
 func parsePacketSequence(packetSequence string) []PacketLoss {
@@ -74,7 +74,6 @@ func send(c *sr.Client, senderLoss, acknowledgementLoss bool) {
 		log.Printf("Sender sent packet with sequence number %d\n", sequenceNumber)
 	}
 }
-
 
 func receiveHandler(c *sr.Client, name string, receivedACK chan int) {
 	for {
